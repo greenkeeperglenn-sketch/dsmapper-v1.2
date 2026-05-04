@@ -3,9 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Location, PhotoAssessment, PressureScore } from "@/lib/airtable";
 import type { ForecastPressureRow } from "@/lib/forecast-pressure";
+import type { RiskBand } from "@/lib/smith-kerns";
 import { HeroSummary, type Range } from "@/components/HeroSummary";
 import { PhotoStrip } from "@/components/PhotoStrip";
 import { StoredAssessmentReview } from "@/components/StoredAssessmentReview";
+
+export type LocationStat = {
+  today: { date: string; probability: number; band: RiskBand } | null;
+  peak14: { date: string; probability: number; band: RiskBand } | null;
+};
 
 async function readError(res: Response): Promise<string> {
   const text = await res.text();
@@ -39,9 +45,11 @@ function rangeToDays(range: Range): number {
 export function DashboardClient({
   locations,
   photoCounts = {},
+  locationStats = {},
 }: {
   locations: Location[];
   photoCounts?: Record<string, number>;
+  locationStats?: Record<string, LocationStat>;
 }) {
   const active = useMemo(() => {
     const list = locations.filter((l) => l.active);
@@ -154,6 +162,7 @@ export function DashboardClient({
         locations={active}
         selectedId={selectedId}
         photoCounts={photoCounts}
+        locationStats={locationStats}
         onSelect={setSelectedId}
       />
       {error && (
@@ -224,11 +233,13 @@ function LocationStrip({
   locations,
   selectedId,
   photoCounts,
+  locationStats,
   onSelect,
 }: {
   locations: Location[];
   selectedId: string;
   photoCounts: Record<string, number>;
+  locationStats: Record<string, LocationStat>;
   onSelect: (id: string) => void;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -270,6 +281,7 @@ function LocationStrip({
         <div className="mx-auto flex w-max gap-3 px-10 pt-2">
           {locations.map((loc) => {
             const count = photoCounts[loc.id] ?? 0;
+            const stat = locationStats[loc.id];
             const isSelected = loc.id === selectedId;
             return (
               <button
@@ -281,8 +293,16 @@ function LocationStrip({
                     ? "border-stone-900 shadow-lg ring-4 ring-stone-200"
                     : "border-stone-200 hover:scale-105 hover:border-stone-400 hover:shadow-md hover:ring-4 hover:ring-blue-100"
                 }`}
-                style={{ minWidth: 116 }}
-                title={`${loc.name} — ${count} photo${count === 1 ? "" : "s"}`}
+                style={{ minWidth: 132 }}
+                title={`${loc.name} — ${count} photo${count === 1 ? "" : "s"}${
+                  stat?.today
+                    ? ` · today ${pct(stat.today.probability)} (${stat.today.band})`
+                    : ""
+                }${
+                  stat?.peak14
+                    ? ` · 14d peak ${pct(stat.peak14.probability)} (${stat.peak14.band})`
+                    : ""
+                }`}
               >
                 <div className="flex h-16 w-24 items-center justify-center">
                   {loc.logo_url ? (
@@ -309,9 +329,21 @@ function LocationStrip({
                   className={`text-center text-xs font-semibold leading-tight ${
                     isSelected ? "text-stone-900" : "text-stone-700"
                   }`}
-                  style={{ maxWidth: 110 }}
+                  style={{ maxWidth: 120 }}
                 >
                   {loc.name}
+                </div>
+                <div className="flex w-full items-stretch gap-1">
+                  <PressurePill
+                    label="Today"
+                    value={stat?.today?.probability ?? null}
+                    band={stat?.today?.band ?? null}
+                  />
+                  <PressurePill
+                    label="14d"
+                    value={stat?.peak14?.probability ?? null}
+                    band={stat?.peak14?.band ?? null}
+                  />
                 </div>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums ${
@@ -341,6 +373,53 @@ function LocationStrip({
       )}
     </nav>
   );
+}
+
+function PressurePill({
+  label,
+  value,
+  band,
+}: {
+  label: string;
+  value: number | null;
+  band: RiskBand | null;
+}) {
+  const palette = value != null && band ? bandPalette(band) : neutralPalette();
+  return (
+    <div
+      className="flex flex-1 flex-col items-center rounded-md border px-1 py-0.5 leading-tight"
+      style={{
+        background: palette.bg,
+        borderColor: palette.border,
+        color: palette.fg,
+      }}
+    >
+      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-80">
+        {label}
+      </span>
+      <span className="text-xs font-bold tabular-nums">
+        {value != null ? pct(value) : "—"}
+      </span>
+    </div>
+  );
+}
+
+function pct(p: number): string {
+  return `${Math.round(p * 100)}%`;
+}
+
+function bandPalette(band: RiskBand) {
+  if (band === "High") {
+    return { bg: "#fef2f2", border: "#fca5a5", fg: "#991b1b" };
+  }
+  if (band === "Moderate") {
+    return { bg: "#fffbeb", border: "#fcd34d", fg: "#92400e" };
+  }
+  return { bg: "#f0fdf4", border: "#86efac", fg: "#166534" };
+}
+
+function neutralPalette() {
+  return { bg: "#f5f5f4", border: "#d6d3d1", fg: "#78716c" };
 }
 
 function ScrollButton({
