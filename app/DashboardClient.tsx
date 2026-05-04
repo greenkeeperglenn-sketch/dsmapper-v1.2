@@ -293,7 +293,7 @@ function LocationStrip({
                     ? "border-stone-900 shadow-lg ring-4 ring-stone-200"
                     : "border-stone-200 hover:scale-105 hover:border-stone-400 hover:shadow-md hover:ring-4 hover:ring-blue-100"
                 }`}
-                style={{ minWidth: 132 }}
+                style={{ minWidth: 144 }}
                 title={`${loc.name} — ${count} photo${count === 1 ? "" : "s"}${
                   stat?.today
                     ? ` · today ${pct(stat.today.probability)} (${stat.today.band})`
@@ -334,14 +334,16 @@ function LocationStrip({
                 </div>
                 <div className="flex w-full items-stretch gap-1">
                   <PressurePill
-                    label="Today"
+                    label="Latest"
                     value={stat?.today?.probability ?? null}
                     band={stat?.today?.band ?? null}
+                    date={stat?.today?.date ?? null}
                   />
                   <PressurePill
-                    label="14d high"
+                    label="14d peak"
                     value={stat?.peak14?.probability ?? null}
                     band={stat?.peak14?.band ?? null}
+                    date={stat?.peak14?.date ?? null}
                   />
                 </div>
                 <span
@@ -378,29 +380,42 @@ function PressurePill({
   label,
   value,
   band,
+  date,
 }: {
   label: string;
   value: number | null;
   band: RiskBand | null;
+  date: string | null;
 }) {
   const palette = value != null && band ? bandPalette(band) : neutralPalette();
   return (
     <div
-      className="flex flex-1 flex-col items-center rounded-md border px-1 py-0.5 leading-tight"
+      className="flex flex-1 flex-col items-center rounded-md border px-1 py-1 leading-tight"
       style={{
         background: palette.bg,
         borderColor: palette.border,
         color: palette.fg,
       }}
     >
-      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-80">
+      <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-wide opacity-80">
         {label}
       </span>
-      <span className="text-xs font-bold tabular-nums">
+      <span className="text-sm font-bold tabular-nums">
         {value != null ? pct(value) : "—"}
+      </span>
+      <span className="whitespace-nowrap text-[9px] tabular-nums opacity-70">
+        {date ? fmtShortDate(date) : "—"}
       </span>
     </div>
   );
+}
+
+function fmtShortDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
 }
 
 function pct(p: number): string {
