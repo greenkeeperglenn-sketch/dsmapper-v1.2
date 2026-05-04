@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Focus } from "@/lib/anthropic";
+import type { Focus } from "@/lib/focus";
 
 export type OverlayMode = "off" | "foci" | "disease";
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PhotoAssessment } from "@/lib/airtable";
-import type { Focus } from "@/lib/anthropic";
+import type { Focus } from "@/lib/focus";
 import { RectifiedCanvasView } from "./RectifiedCanvasView";
 
 type AuditJson = {
