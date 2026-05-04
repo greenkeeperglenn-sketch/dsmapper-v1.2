@@ -79,15 +79,6 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Dollar spot pressure
-        </h1>
-        <p className="mt-1 text-sm text-stone-600">
-          Smith-Kerns logistic-regression probability based on the trailing
-          5-day mean temperature and relative humidity.
-        </p>
-      </div>
       {loadError && (
         <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
           <div className="font-semibold">Airtable load failed</div>
