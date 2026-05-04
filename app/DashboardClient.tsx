@@ -339,7 +339,7 @@ function LocationStrip({
                     band={stat?.today?.band ?? null}
                   />
                   <PressurePill
-                    label="14d"
+                    label="14d high"
                     value={stat?.peak14?.probability ?? null}
                     band={stat?.peak14?.band ?? null}
                   />
