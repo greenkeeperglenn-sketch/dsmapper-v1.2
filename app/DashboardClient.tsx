@@ -1,14 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Location, PhotoAssessment, PressureScore } from "@/lib/airtable";
 import type { ForecastPressureRow } from "@/lib/forecast-pressure";
 import { HeroSummary, type Range } from "@/components/HeroSummary";
-import { PhaseGrid } from "@/components/PhaseGrid";
 import { PhotoStrip } from "@/components/PhotoStrip";
-import { PhotoTrendPanels } from "@/components/PhotoTrendPanels";
-import { PressurePanels } from "@/components/PressurePanels";
 import { StoredAssessmentReview } from "@/components/StoredAssessmentReview";
 
 async function readError(res: Response): Promise<string> {
@@ -84,12 +80,6 @@ export function DashboardClient({
     return m;
   }, [photos]);
 
-  const photoCountByDate = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const [d, list] of photosByDate) m.set(d, list.length);
-    return m;
-  }, [photosByDate]);
-
   const viewingPhotos = viewingDate
     ? photosByDate.get(viewingDate) ?? []
     : [];
@@ -151,11 +141,7 @@ export function DashboardClient({
   if (active.length === 0) {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-6 text-center text-sm text-stone-600">
-        No active locations.{" "}
-        <Link href="/locations" className="underline">
-          Add one
-        </Link>{" "}
-        to get started.
+        No active locations.
       </div>
     );
   }
@@ -170,17 +156,6 @@ export function DashboardClient({
         photoCounts={photoCounts}
         onSelect={setSelectedId}
       />
-      <div className="flex flex-wrap items-center gap-3">
-        {selectedId && (
-          <Link
-            href={`/locations/${selectedId}`}
-            className="ml-auto text-sm text-stone-600 underline"
-          >
-            View full history
-          </Link>
-        )}
-      </div>
-
       {error && (
         <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
@@ -190,12 +165,7 @@ export function DashboardClient({
 
       {scores && scores.length === 0 && (
         <div className="rounded-lg border border-stone-200 bg-white p-6 text-sm text-stone-600">
-          No pressure scores yet for this location. The first score appears
-          once 5 days of weather have been backfilled — try clicking{" "}
-          <Link href="/locations" className="underline">
-            Fetch weather now
-          </Link>
-          .
+          No pressure scores yet for this location.
         </div>
       )}
 
@@ -246,44 +216,6 @@ export function DashboardClient({
         </section>
       )}
 
-      {scores && scores.length > 0 && (
-        <details className="rounded-lg border border-stone-200 bg-white">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50">
-            Show more detail (decomposition, raw inputs, photo trends)
-          </summary>
-          <div className="space-y-6 border-t border-stone-200 p-4">
-            <PhaseGrid
-              scores={scores}
-              forecast={forecast}
-              locationName={selectedLocation?.name ?? "Location"}
-              locationLogoUrl={selectedLocation?.logo_url ?? null}
-              photos={photos ?? []}
-            />
-            <PressurePanels
-              scores={scores}
-              forecast={forecast}
-              photosByDate={photoCountByDate}
-              onSelectPhotoDate={(d) =>
-                setViewingDate((prev) => (prev === d ? null : d))
-              }
-              locationName={selectedLocation?.name ?? "Location"}
-              locationLogoUrl={selectedLocation?.logo_url ?? null}
-              photos={photos ?? []}
-              syncedAtIso={syncedAt}
-              caughtUpDays={caughtUpDays}
-              catchUpError={catchUpError}
-            />
-            {photos && (
-              <PhotoTrendPanels
-                photos={photos}
-                onSelectDate={(d) =>
-                  setViewingDate((prev) => (prev === d ? null : d))
-                }
-              />
-            )}
-          </div>
-        </details>
-      )}
     </div>
   );
 }
