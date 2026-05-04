@@ -15,16 +15,16 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-stone-50 text-stone-900">
         <header className="border-b border-stone-200 bg-white">
-          <div className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-3">
+          <div className="mx-auto flex max-w-6xl items-center gap-5 px-6 py-5">
             <Image
               src="/stri-logo.png"
               alt="STRI"
-              width={108}
-              height={40}
+              width={216}
+              height={80}
               priority
-              className="h-8 w-auto"
+              className="h-14 w-auto sm:h-16"
             />
-            <span className="text-base font-semibold tracking-tight">
+            <span className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Dollar Spot Monitor
             </span>
           </div>
