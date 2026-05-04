@@ -326,12 +326,11 @@ function LocationStrip({
                   )}
                 </div>
                 <div
-                  className={`text-center text-xs font-semibold leading-tight ${
+                  className={`flex h-8 w-full items-start justify-center overflow-hidden px-1 text-center text-xs font-semibold leading-tight ${
                     isSelected ? "text-stone-900" : "text-stone-700"
                   }`}
-                  style={{ maxWidth: 120 }}
                 >
-                  {loc.name}
+                  <span className="line-clamp-2">{loc.name}</span>
                 </div>
                 <div className="flex w-full items-stretch gap-1">
                   <PressurePill
