@@ -6,7 +6,7 @@ import type { ForecastPressureRow } from "@/lib/forecast-pressure";
 import type { RiskBand } from "@/lib/smith-kerns";
 import { bandPalette, neutralPalette } from "@/lib/risk-palette";
 import { HeroSummary, type Range } from "@/components/HeroSummary";
-import { PhotoStrip } from "@/components/PhotoStrip";
+import { PhotoStrip, compareSites } from "@/components/PhotoStrip";
 import { StoredAssessmentReview } from "@/components/StoredAssessmentReview";
 
 export type LocationStat = {
@@ -91,9 +91,15 @@ export function DashboardClient({
     return m;
   }, [photos]);
 
-  const viewingPhotos = viewingDate
-    ? photosByDate.get(viewingDate) ?? []
-    : [];
+  const selectedLocation = active.find((l) => l.id === selectedId);
+  const siteOrder = selectedLocation?.sites ?? [];
+
+  const viewingPhotos = useMemo(() => {
+    const list = viewingDate ? photosByDate.get(viewingDate) ?? [] : [];
+    return [...list].sort((a, b) =>
+      compareSites(a.quadrat_label, b.quadrat_label, siteOrder)
+    );
+  }, [viewingDate, photosByDate, siteOrder]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -157,8 +163,6 @@ export function DashboardClient({
     );
   }
 
-  const selectedLocation = active.find((l) => l.id === selectedId);
-
   return (
     <div className="space-y-6">
       <LocationStrip
@@ -204,6 +208,7 @@ export function DashboardClient({
         <PhotoStrip
           photos={photos}
           scores={scores ?? []}
+          siteOrder={siteOrder}
           onSelect={(d) =>
             setViewingDate((prev) => (prev === d ? null : d))
           }

@@ -16,11 +16,13 @@ import { RectifiedCanvasView } from "./RectifiedCanvasView";
 export function PhotoStrip({
   photos,
   scores,
+  siteOrder = [],
   onSelect,
   selectedDate,
 }: {
   photos: PhotoAssessment[];
   scores: PressureScore[];
+  siteOrder?: string[];
   onSelect: (date: string) => void;
   selectedDate?: string | null;
 }) {
@@ -42,8 +44,10 @@ export function PhotoStrip({
 
   const siteRows = useMemo(
     () =>
-      Array.from(bySite.entries()).sort((a, b) => a[0].localeCompare(b[0])),
-    [bySite]
+      Array.from(bySite.entries()).sort((a, b) =>
+        compareSites(a[0], b[0], siteOrder)
+      ),
+    [bySite, siteOrder]
   );
 
   // If the focused site disappears (e.g. location switch), drop it.
@@ -339,30 +343,12 @@ function GalleryCard({
           maxWidth={220}
           initialMode="disease"
         />
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/75 via-black/40 to-transparent px-2 py-2 leading-tight"
-          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.85)" }}
-        >
-          <div className="text-white">
-            <div className="text-[10px] font-semibold uppercase tracking-wide opacity-90">
-              Disease
-            </div>
-            <div className="text-2xl font-bold tabular-nums">
-              {photo.disease_pct.toFixed(1)}%
-            </div>
-          </div>
-          <div className="text-right text-white">
-            <div className="text-[10px] font-semibold uppercase tracking-wide opacity-90">
-              Foci
-            </div>
-            <div className="text-2xl font-bold tabular-nums">
-              {photo.foci_count}
-            </div>
-          </div>
-        </div>
       </div>
-      <div className="text-center text-xs font-medium text-stone-700">
-        {fmt(photo.photo_date)}
+      <div className="flex items-center justify-between px-1 pt-1 text-[11px] font-medium text-stone-700">
+        <span className="tabular-nums">{fmt(photo.photo_date)}</span>
+        <span className="tabular-nums">
+          {photo.disease_pct.toFixed(1)}% · {photo.foci_count} foci
+        </span>
       </div>
     </button>
   );
@@ -431,4 +417,23 @@ function daysBetween(fromIso: string, toIso: string): number {
   const from = Date.parse(`${fromIso}T00:00:00Z`);
   const to = Date.parse(`${toIso}T00:00:00Z`);
   return Math.round((to - from) / 86_400_000);
+}
+
+/**
+ * Order sites by the location's `sites` field (one per line in Airtable).
+ * Sites not listed there fall to the bottom in alphabetical order. This
+ * keeps the strip layout stable across page loads and across days when
+ * new photos arrive.
+ */
+export function compareSites(
+  a: string,
+  b: string,
+  order: string[]
+): number {
+  const ia = order.indexOf(a);
+  const ib = order.indexOf(b);
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  return a.localeCompare(b);
 }
