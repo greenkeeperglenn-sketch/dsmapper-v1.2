@@ -45,10 +45,12 @@ function rangeToDays(range: Range): number {
 export function DashboardClient({
   locations,
   photoCounts = {},
+  lastPhotoDate = {},
   locationStats = {},
 }: {
   locations: Location[];
   photoCounts?: Record<string, number>;
+  lastPhotoDate?: Record<string, string>;
   locationStats?: Record<string, LocationStat>;
 }) {
   const active = useMemo(() => {
@@ -162,6 +164,7 @@ export function DashboardClient({
         locations={active}
         selectedId={selectedId}
         photoCounts={photoCounts}
+        lastPhotoDate={lastPhotoDate}
         locationStats={locationStats}
         onSelect={setSelectedId}
       />
@@ -233,12 +236,14 @@ function LocationStrip({
   locations,
   selectedId,
   photoCounts,
+  lastPhotoDate,
   locationStats,
   onSelect,
 }: {
   locations: Location[];
   selectedId: string;
   photoCounts: Record<string, number>;
+  lastPhotoDate: Record<string, string>;
   locationStats: Record<string, LocationStat>;
   onSelect: (id: string) => void;
 }) {
@@ -282,6 +287,8 @@ function LocationStrip({
           {locations.map((loc) => {
             const count = photoCounts[loc.id] ?? 0;
             const stat = locationStats[loc.id];
+            const last = lastPhotoDate[loc.id] ?? null;
+            const daysSince = last ? daysBetween(last, todayIsoUTC()) : null;
             const isSelected = loc.id === selectedId;
             return (
               <button
@@ -346,15 +353,10 @@ function LocationStrip({
                     date={stat?.peak14?.date ?? null}
                   />
                 </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums ${
-                    isSelected
-                      ? "bg-stone-900 text-white"
-                      : "bg-stone-100 text-stone-600 group-hover:bg-blue-50 group-hover:text-blue-800"
-                  }`}
-                >
-                  {count} photo{count === 1 ? "" : "s"}
-                </span>
+                <FreshnessPill
+                  daysSince={daysSince}
+                  count={count}
+                />
               </button>
             );
           })}
@@ -416,6 +418,67 @@ function fmtShortDate(iso: string): string {
     month: "short",
     timeZone: "UTC",
   });
+}
+
+function todayIsoUTC(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysBetween(fromIso: string, toIso: string): number {
+  const from = Date.parse(`${fromIso}T00:00:00Z`);
+  const to = Date.parse(`${toIso}T00:00:00Z`);
+  return Math.round((to - from) / 86_400_000);
+}
+
+function FreshnessPill({
+  daysSince,
+  count,
+}: {
+  daysSince: number | null;
+  count: number;
+}) {
+  let palette = neutralPalette();
+  let text: string;
+  if (daysSince == null) {
+    text = "no photos";
+  } else if (daysSince <= 0) {
+    text = "today";
+    palette = bandPalette("Low");
+  } else if (daysSince === 1) {
+    text = "1 day ago";
+    palette = bandPalette("Low");
+  } else if (daysSince <= 6) {
+    text = `${daysSince} days ago`;
+    palette = bandPalette("Low");
+  } else if (daysSince <= 13) {
+    text = `${daysSince} days ago`;
+    palette = bandPalette("Moderate");
+  } else {
+    text = `${daysSince} days ago`;
+    palette = bandPalette("High");
+  }
+  return (
+    <div
+      className="flex w-full flex-col items-center rounded-md border px-1 py-0.5 leading-tight"
+      style={{
+        background: palette.bg,
+        borderColor: palette.border,
+        color: palette.fg,
+      }}
+      title={
+        daysSince == null
+          ? "No photos yet"
+          : `Last photo ${daysSince} day${daysSince === 1 ? "" : "s"} ago · target every 7 days`
+      }
+    >
+      <span className="whitespace-nowrap text-[10px] font-bold tabular-nums">
+        {text}
+      </span>
+      <span className="text-[9px] tabular-nums opacity-70">
+        {count} photo{count === 1 ? "" : "s"}
+      </span>
+    </div>
+  );
 }
 
 function pct(p: number): string {
