@@ -8,10 +8,10 @@ import { bandPalette, neutralPalette } from "@/lib/risk-palette";
 import { RectifiedCanvasView } from "./RectifiedCanvasView";
 
 /**
- * Strip of saved photo thumbnails. Default view groups by site
- * (`quadrat_label`), one row per site. Click a site chip to focus on a
- * single site's chronological gallery, with the average Smith-Kerns
- * pressure between consecutive photos shown in the gaps.
+ * Per-site timeline gallery. Renders the chronological photo gallery for
+ * the currently selected site, with the average Smith-Kerns pressure
+ * between consecutive visits in the gaps. Site chips at the top switch
+ * between sites for the active location.
  */
 export function PhotoStrip({
   photos,
@@ -26,8 +26,6 @@ export function PhotoStrip({
   onSelect: (date: string) => void;
   selectedDate?: string | null;
 }) {
-  const [focusedSite, setFocusedSite] = useState<string | null>(null);
-
   const bySite = useMemo(() => {
     const m = new Map<string, PhotoAssessment[]>();
     for (const p of photos) {
@@ -50,10 +48,20 @@ export function PhotoStrip({
     [bySite, siteOrder]
   );
 
-  // If the focused site disappears (e.g. location switch), drop it.
+  const firstSite = siteRows[0]?.[0] ?? null;
+  const [focusedSite, setFocusedSite] = useState<string | null>(firstSite);
+
+  // Snap the active site to a valid one whenever the available sites
+  // change (location switch, first load, etc.).
   useEffect(() => {
-    if (focusedSite && !bySite.has(focusedSite)) setFocusedSite(null);
-  }, [focusedSite, bySite]);
+    if (siteRows.length === 0) {
+      if (focusedSite !== null) setFocusedSite(null);
+      return;
+    }
+    if (!focusedSite || !bySite.has(focusedSite)) {
+      setFocusedSite(siteRows[0][0]);
+    }
+  }, [siteRows, bySite, focusedSite]);
 
   if (photos.length === 0) {
     return (
@@ -68,21 +76,14 @@ export function PhotoStrip({
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold tracking-tight text-stone-900">
-            Saved photos ({photos.length})
+            {focusedSite ?? "Saved photos"}
           </h2>
           <p className="text-xs text-stone-500">
-            {focusedSite
-              ? "Chronological gallery — pressure between visits is shown in the gaps."
-              : "Click a site to view that site's timeline with pressure between visits."}
+            Chronological gallery — pressure between visits is shown in the
+            gaps.
           </p>
         </div>
         <div className="flex flex-wrap gap-1">
-          <SiteChip
-            label="All sites"
-            count={photos.length}
-            active={focusedSite === null}
-            onClick={() => setFocusedSite(null)}
-          />
           {siteRows.map(([site, list]) => (
             <SiteChip
               key={site}
@@ -95,26 +96,13 @@ export function PhotoStrip({
         </div>
       </header>
 
-      {focusedSite ? (
+      {focusedSite && (
         <SiteGallery
           photos={bySite.get(focusedSite) ?? []}
           scores={scores}
           onSelect={onSelect}
           selectedDate={selectedDate ?? null}
         />
-      ) : (
-        <div className="space-y-3">
-          {siteRows.map(([site, list]) => (
-            <SiteRow
-              key={site}
-              site={site}
-              photos={list}
-              onSelect={onSelect}
-              onFocus={() => setFocusedSite(site)}
-              selectedDate={selectedDate ?? null}
-            />
-          ))}
-        </div>
       )}
     </section>
   );
@@ -148,106 +136,6 @@ function SiteChip({
         }`}
       >
         ({count})
-      </span>
-    </button>
-  );
-}
-
-function SiteRow({
-  site,
-  photos,
-  onSelect,
-  onFocus,
-  selectedDate,
-}: {
-  site: string;
-  photos: PhotoAssessment[];
-  onSelect: (date: string) => void;
-  onFocus: () => void;
-  selectedDate: string | null;
-}) {
-  return (
-    <div>
-      <div className="mb-1 flex items-baseline gap-2">
-        <button
-          type="button"
-          onClick={onFocus}
-          className="text-xs font-semibold uppercase tracking-wide text-stone-700 hover:text-stone-900 hover:underline"
-        >
-          {site}
-        </button>
-        <span className="text-[11px] text-stone-500">{photos.length}</span>
-        <button
-          type="button"
-          onClick={onFocus}
-          className="ml-auto text-[11px] text-stone-500 hover:text-stone-900 hover:underline"
-        >
-          View timeline →
-        </button>
-      </div>
-      <div className="overflow-x-auto pb-1">
-        <div className="flex gap-2">
-          {photos.map((p) => (
-            <Thumb
-              key={p.id}
-              photo={p}
-              onSelect={() => onSelect(p.photo_date)}
-              selected={selectedDate === p.photo_date}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Thumb({
-  photo,
-  onSelect,
-  selected,
-}: {
-  photo: PhotoAssessment;
-  onSelect: () => void;
-  selected: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      title={`${photo.quadrat_label} · ${photo.photo_date} · ${photo.foci_count} foci · ${photo.disease_pct.toFixed(1)}%`}
-      className={`group flex shrink-0 flex-col items-stretch gap-1 rounded border-2 bg-white p-1 transition-colors ${
-        selected
-          ? "border-blue-500 ring-2 ring-blue-200"
-          : "border-stone-200 hover:border-stone-400"
-      }`}
-      style={{ width: 116 }}
-    >
-      <div
-        className="relative overflow-hidden rounded bg-stone-100"
-        style={{ width: 108, height: 108 }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={photo.rectified_image_url}
-          alt={`${photo.quadrat_label} on ${photo.photo_date}`}
-          className="h-full w-full object-cover"
-          loading="lazy"
-          crossOrigin="anonymous"
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-1 bg-gradient-to-b from-black/70 to-transparent px-1.5 py-1 leading-tight"
-          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.7)" }}
-        >
-          <span className="text-sm font-bold tabular-nums text-white">
-            {photo.disease_pct.toFixed(1)}%
-          </span>
-          <span className="text-sm font-bold tabular-nums text-white">
-            {photo.foci_count}
-          </span>
-        </div>
-      </div>
-      <span className="text-center text-[11px] font-medium tabular-nums text-stone-700">
-        {fmt(photo.photo_date)}
       </span>
     </button>
   );
