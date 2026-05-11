@@ -63,8 +63,11 @@ export default async function HomePage() {
   }
 
   const photoCounts: Record<string, number> = {};
+  const lastPhotoDate: Record<string, string> = {};
   for (const p of allPhotos) {
     photoCounts[p.locationId] = (photoCounts[p.locationId] ?? 0) + 1;
+    const prev = lastPhotoDate[p.locationId];
+    if (!prev || p.photo_date > prev) lastPhotoDate[p.locationId] = p.photo_date;
   }
 
   const active = locations.filter((l) => l.active);
@@ -94,6 +97,7 @@ export default async function HomePage() {
       <DashboardClient
         locations={locations}
         photoCounts={photoCounts}
+        lastPhotoDate={lastPhotoDate}
         locationStats={locationStats}
       />
     </div>
