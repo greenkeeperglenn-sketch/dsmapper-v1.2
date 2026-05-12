@@ -294,7 +294,7 @@ function ModeButton({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
       disabled={disabled}
       className={`px-2.5 py-1 transition-colors ${
         active
