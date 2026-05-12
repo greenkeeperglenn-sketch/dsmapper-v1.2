@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Location, PhotoAssessment, PressureScore } from "@/lib/airtable";
 import type { ForecastPressureRow } from "@/lib/forecast-pressure";
@@ -49,13 +48,11 @@ export function DashboardClient({
   photoCounts = {},
   lastPhotoDate = {},
   locationStats = {},
-  snapshotGeneratedAt = null,
 }: {
   locations: Location[];
   photoCounts?: Record<string, number>;
   lastPhotoDate?: Record<string, string>;
   locationStats?: Record<string, LocationStat>;
-  snapshotGeneratedAt?: string | null;
 }) {
   const active = useMemo(() => {
     const list = locations.filter((l) => l.active);
@@ -168,7 +165,6 @@ export function DashboardClient({
 
   return (
     <div className="space-y-6">
-      <SnapshotBar generatedAtIso={snapshotGeneratedAt} />
       <LocationStrip
         locations={active}
         selectedId={selectedId}
@@ -494,90 +490,6 @@ function FreshnessPill({
 
 function pct(p: number): string {
   return `${Math.round(p * 100)}%`;
-}
-
-function SnapshotBar({
-  generatedAtIso,
-}: {
-  generatedAtIso: string | null;
-}) {
-  const router = useRouter();
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Tick once a minute so the "X min ago" label stays current without
-  // a full re-render.
-  const [, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const h = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(h);
-  }, []);
-
-  const ageMs = generatedAtIso
-    ? Date.now() - Date.parse(generatedAtIso)
-    : null;
-  const stale = ageMs != null && ageMs > 26 * 60 * 60 * 1000;
-  const missing = generatedAtIso == null;
-  const palette = missing
-    ? bandPalette("High")
-    : stale
-      ? bandPalette("Moderate")
-      : { bg: "#f8fafc", border: "#e2e8f0", fg: "#475569" };
-
-  async function refresh() {
-    setRefreshing(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/snapshot/refresh", { method: "POST" });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-          error?: string;
-        };
-        throw new Error(body.message ?? body.error ?? `HTTP ${res.status}`);
-      }
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setRefreshing(false);
-    }
-  }
-
-  return (
-    <div
-      className="flex flex-wrap items-center justify-between gap-2 rounded border px-3 py-1.5 text-xs"
-      style={{
-        background: palette.bg,
-        borderColor: palette.border,
-        color: palette.fg,
-      }}
-    >
-      <span>
-        {missing
-          ? "No weather snapshot yet — click refresh to generate one."
-          : `Weather snapshot ${formatAge(ageMs ?? 0)}${stale ? " (stale)" : ""}.`}
-        {error && <span className="ml-2 text-red-700">· {error}</span>}
-      </span>
-      <button
-        type="button"
-        onClick={refresh}
-        disabled={refreshing}
-        className="rounded border border-current bg-white/70 px-2 py-0.5 text-xs font-medium hover:bg-white disabled:opacity-50"
-      >
-        {refreshing ? "Refreshing…" : "Refresh now"}
-      </button>
-    </div>
-  );
-}
-
-function formatAge(ms: number): string {
-  const mins = Math.max(0, Math.round(ms / 60_000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 48) return `${hours} hr ago`;
-  const days = Math.round(hours / 24);
-  return `${days} days ago`;
 }
 
 function ScrollButton({

@@ -135,7 +135,6 @@ export default async function HomePage() {
         photoCounts={photoCounts}
         lastPhotoDate={lastPhotoDate}
         locationStats={locationStats}
-        snapshotGeneratedAt={snapshot?.generated_at_iso ?? null}
       />
     </div>
   );
