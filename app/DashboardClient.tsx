@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Location, PhotoAssessment, PressureScore } from "@/lib/airtable";
+import type { Location, PhotoAssessment, PressureScore } from "@/lib/db";
 import type { ForecastPressureRow } from "@/lib/forecast-pressure";
 import type { RiskBand } from "@/lib/smith-kerns";
 import { bandPalette, neutralPalette } from "@/lib/risk-palette";

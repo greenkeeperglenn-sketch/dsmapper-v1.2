@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listPhotosForLocation } from "@/lib/airtable";
+import { listPhotosForLocation } from "@/lib/db";
 import { jsonRoute } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";

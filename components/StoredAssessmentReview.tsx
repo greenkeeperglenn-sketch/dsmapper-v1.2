@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PhotoAssessment } from "@/lib/airtable";
+import type { PhotoAssessment } from "@/lib/db";
 import type { Focus } from "@/lib/focus";
 import { RectifiedCanvasView } from "./RectifiedCanvasView";
 

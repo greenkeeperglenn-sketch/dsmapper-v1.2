@@ -8,7 +8,7 @@ import {
   listWeatherForLocation,
   upsertPressureScore,
   upsertWeatherReading,
-} from "./airtable";
+} from "./db";
 import { addDays, WEATHER_BACKFILL_START, yesterdayUTC } from "./dates";
 import { fetchDailyRange } from "./open-meteo";
 import { smithKerns } from "./smith-kerns";

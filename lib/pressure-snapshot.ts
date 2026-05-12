@@ -6,7 +6,7 @@
 // read this snapshot instead of hitting Open-Meteo on every request.
 
 import { list, put } from "@vercel/blob";
-import type { PressureScore } from "./airtable";
+import type { PressureScore } from "./db";
 import type { ForecastPressureRow } from "./forecast-pressure";
 import type { RiskBand } from "./smith-kerns";
 

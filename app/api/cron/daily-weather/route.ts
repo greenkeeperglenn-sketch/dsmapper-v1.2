@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   findPressureByLocationDate,
   listActiveLocations,
-} from "@/lib/airtable";
+} from "@/lib/db";
 import { yesterdayUTC } from "@/lib/dates";
 import { computeForecastPressure } from "@/lib/forecast-pressure";
 import {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getLocation, listPressureForLocation } from "@/lib/airtable";
+import { getLocation, listPressureForLocation } from "@/lib/db";
 import { jsonRoute } from "@/lib/api-helpers";
 import { addDays, todayUTC, yesterdayUTC } from "@/lib/dates";
 import { computeForecastPressure } from "@/lib/forecast-pressure";

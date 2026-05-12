@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { PhotoAssessment, PressureScore } from "@/lib/airtable";
+import type { PhotoAssessment, PressureScore } from "@/lib/db";
 import type { ForecastPressureRow } from "@/lib/forecast-pressure";
 import { buildShareCard, copyOrDownloadBlob } from "@/lib/share-card";
 

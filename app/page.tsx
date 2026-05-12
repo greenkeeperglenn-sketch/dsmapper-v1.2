@@ -4,7 +4,7 @@ import {
   listPressureForLocation,
   type Location,
   type PressureScore,
-} from "@/lib/airtable";
+} from "@/lib/db";
 import { addDays, todayUTC } from "@/lib/dates";
 import {
   computeForecastPressure,

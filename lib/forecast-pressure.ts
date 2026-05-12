@@ -5,8 +5,8 @@
 // Open-Meteo's forecast API). We seed the window with the last few
 // actuals, then walk through each forecast day and compute the mean.
 
-import type { Location } from "./airtable";
-import { listWeatherForLocation } from "./airtable";
+import type { Location } from "./db";
+import { listWeatherForLocation } from "./db";
 import { addDays, todayUTC } from "./dates";
 import { fetchForecast } from "./open-meteo";
 import { bandFor, smithKerns } from "./smith-kerns";

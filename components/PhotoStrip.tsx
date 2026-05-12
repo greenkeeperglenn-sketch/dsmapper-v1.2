@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import type { PhotoAssessment, PressureScore } from "@/lib/airtable";
+import type { PhotoAssessment, PressureScore } from "@/lib/db";
 import type { Focus } from "@/lib/focus";
 import { bandFor } from "@/lib/smith-kerns";
 import { bandPalette, neutralPalette } from "@/lib/risk-palette";
