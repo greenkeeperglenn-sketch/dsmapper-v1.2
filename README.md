@@ -87,17 +87,40 @@ pnpm build        # production build + type check
 ### 4. Deploy
 
 Push to a Vercel project; set the same env vars in the project settings.
-The cron in `vercel.json` runs `/api/cron/daily-weather` at 06:00 UTC daily
-to keep the weather data current. To trigger it manually:
+The cron in `vercel.json` runs `/api/cron/daily-weather` at **04:00 UTC**
+daily (05:00 BST / 04:00 GMT). For each active location it:
+
+1. Ingests yesterday's actuals from Open-Meteo into Airtable.
+2. Computes the 14-day Smith-Kerns forecast.
+3. Packs `today_score` + `peak14` + `forecast` for every location into a
+   single JSON document at `pressure-snapshot/latest.json` in Vercel Blob.
+
+The dashboard reads that one blob, so the home page and `/api/pressure`
+issue **zero Open-Meteo requests** on the hot path.
+
+To trigger the cron manually (e.g. after adding a new location):
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" \
      https://your-app.vercel.app/api/cron/daily-weather
 ```
 
-The dashboard also self-heals on load: if the latest pressure row is older
-than yesterday, `/api/pressure` fetches the gap from Open-Meteo, writes it
-to Airtable, and recomputes Smith-Kerns before returning.
+The header bar on the dashboard shows when the current snapshot was
+generated. A **Refresh now** button posts to `/api/snapshot/refresh`,
+which runs the same job — no auth required, rate-limited to once every
+5 minutes per Vercel instance.
+
+#### Safety nets
+
+- **First-load fallback for new locations.** Any active location absent
+  from the snapshot (added since the last cron) falls back to a live
+  Open-Meteo + Airtable read on the home page.
+- **Self-healing catch-up.** If the latest stored pressure row is older
+  than yesterday when `/api/pressure` is hit (cron missed / blob
+  unreachable / a long gap), it fetches the missing days from
+  Open-Meteo, writes them to Airtable, and recomputes Smith-Kerns
+  before returning. Suppressed per location for 30 minutes so a burst
+  of dashboard loads can't hammer the API.
 
 ---
 

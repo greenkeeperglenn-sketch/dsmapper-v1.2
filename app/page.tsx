@@ -10,15 +10,39 @@ import {
   computeForecastPressure,
   type ForecastPressureRow,
 } from "@/lib/forecast-pressure";
+import {
+  pickPeak14,
+  readSnapshot,
+  type LocationSnapshot,
+  type PressureSnapshot,
+} from "@/lib/pressure-snapshot";
 import type { RiskBand } from "@/lib/smith-kerns";
 import { DashboardClient, type LocationStat } from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
 
-async function statForLocation(loc: Location): Promise<LocationStat | null> {
-  // Pull the last few days of actual scores so we always pick the most
-  // recent one even if today's catch-up hasn't run yet, plus the 14-day
-  // forecast peak.
+function fromSnapshot(entry: LocationSnapshot): LocationStat {
+  return {
+    today: entry.today_score
+      ? {
+          date: entry.today_score.date,
+          probability: entry.today_score.smith_kerns_probability,
+          band: entry.today_score.risk_band,
+        }
+      : null,
+    peak14: entry.peak14
+      ? {
+          date: entry.peak14.date,
+          probability: entry.peak14.probability,
+          band: entry.peak14.risk_band,
+        }
+      : null,
+  };
+}
+
+// Live fallback. Only runs for locations missing from the snapshot
+// (brand-new locations or first deploy before the cron has fired).
+async function liveStatForLocation(loc: Location): Promise<LocationStat> {
   const since = addDays(todayUTC(), -7);
   const [actuals, forecast] = await Promise.all([
     listPressureForLocation(loc.id, { sinceDate: since }).catch(
@@ -27,36 +51,33 @@ async function statForLocation(loc: Location): Promise<LocationStat | null> {
     computeForecastPressure(loc, 14).catch(() => [] as ForecastPressureRow[]),
   ]);
   const latest = actuals[actuals.length - 1] ?? null;
-  let peak: { date: string; probability: number; band: RiskBand } | null = null;
-  for (const row of forecast) {
-    if (!peak || row.smith_kerns_probability > peak.probability) {
-      peak = {
-        date: row.date,
-        probability: row.smith_kerns_probability,
-        band: row.risk_band,
-      };
-    }
-  }
+  const peak = pickPeak14(forecast);
+  let band: RiskBand | null = null;
+  if (latest) band = latest.risk_band;
   return {
     today: latest
       ? {
           date: latest.date,
           probability: latest.smith_kerns_probability,
-          band: latest.risk_band,
+          band: band ?? latest.risk_band,
         }
       : null,
-    peak14: peak,
+    peak14: peak
+      ? { date: peak.date, probability: peak.probability, band: peak.risk_band }
+      : null,
   };
 }
 
 export default async function HomePage() {
   let locations: Location[] = [];
   let allPhotos: Awaited<ReturnType<typeof listAllPhotos>> = [];
+  let snapshot: PressureSnapshot | null = null;
   let loadError: string | null = null;
   try {
-    [locations, allPhotos] = await Promise.all([
+    [locations, allPhotos, snapshot] = await Promise.all([
       listLocations(),
       listAllPhotos(),
+      readSnapshot(),
     ]);
   } catch (e) {
     loadError = e instanceof Error ? e.message : String(e);
@@ -71,14 +92,29 @@ export default async function HomePage() {
   }
 
   const active = locations.filter((l) => l.active);
-  const stats = await Promise.all(
-    active.map((l) => statForLocation(l).catch(() => null))
-  );
+
+  // Read each active location's stats from the snapshot. Anything missing
+  // (typically: brand-new location added since the last cron) falls back
+  // to a live Open-Meteo + Airtable read.
   const locationStats: Record<string, LocationStat> = {};
-  active.forEach((l, i) => {
-    const s = stats[i];
-    if (s) locationStats[l.id] = s;
-  });
+  const missing: Location[] = [];
+  for (const loc of active) {
+    const entry = snapshot?.locations[loc.id];
+    if (entry) {
+      locationStats[loc.id] = fromSnapshot(entry);
+    } else {
+      missing.push(loc);
+    }
+  }
+  if (missing.length > 0) {
+    const fallback = await Promise.all(
+      missing.map((l) => liveStatForLocation(l).catch(() => null))
+    );
+    missing.forEach((l, i) => {
+      const s = fallback[i];
+      if (s) locationStats[l.id] = s;
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -99,6 +135,7 @@ export default async function HomePage() {
         photoCounts={photoCounts}
         lastPhotoDate={lastPhotoDate}
         locationStats={locationStats}
+        snapshotGeneratedAt={snapshot?.generated_at_iso ?? null}
       />
     </div>
   );
